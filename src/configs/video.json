@@ -1,0 +1,31 @@
+{
+    "video_capability" : {
+        "resolution" : [
+            "640*480",
+            "1280*720",
+            "1920*1080"
+        ],
+        "framerate" : [
+            "5",
+            "10",
+            "15"
+        ],
+        "profile" : [
+            "baseline",
+            "main",
+            "height"
+        ]
+    },
+    "main" : {
+        "profile": "main",
+        "resolution": "1920*1080",
+        "framerate": "15",
+        "bitrate": "2000"
+    },
+    "minor" : {
+        "profile": "main",
+        "resolution": "640*480",
+        "framerate": "15",
+        "bitrate": "500"
+    }
+}
