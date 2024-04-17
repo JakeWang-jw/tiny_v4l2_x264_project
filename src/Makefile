@@ -42,17 +42,22 @@ export LDFLAGS
 COMPILE_TARGET := tiny_video_program
 
 # 子文件夹路径
+V4L2_CAPTURE_PATH := $(CUR_DIR)/v4l2-capture
 UTILS_PATH := $(CUR_DIR)/utils
 
 # 源文件及目标文件
 SRCS := $(wildcard $(CUR_DIR)/*.c)
-SRCS += $(wildcard $(CUR_DIR)/utils/*.c)
+SRCS += $(wildcard $(V4L2_CAPTURE_PATH)/*.c)
+SRCS += $(wildcard $(UTILS_PATH)/*.c)
 
 OBJS := $(SRCS:.c=.o)
 
-.phony: install all UTILS
-all: UTILS $(OBJS)
+.phony: install all V4L2_CAPTURE UTILS
+all: UTILS V4L2_CAPTURE $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $(COMPILE_TARGET)
+
+V4L2_CAPTURE:
+	$(MAKE) -C $(V4L2_CAPTURE_PATH) all
 
 UTILS:
 	$(MAKE) -C $(UTILS_PATH) all
@@ -63,5 +68,7 @@ install:
 
 .phony: clean
 clean:
+	$(MAKE) -C $(V4L2_CAPTURE_PATH) clean
 	$(MAKE) -C $(UTILS_PATH) clean
 	$(RM) *.o
+	$(RM) $(COMPILE_TARGET)

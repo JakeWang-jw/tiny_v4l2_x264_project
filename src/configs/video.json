@@ -1,31 +1,22 @@
 {
-    "video_capability" : {
-        "resolution" : [
-            "640*480",
-            "1280*720",
-            "1920*1080"
-        ],
-        "framerate" : [
-            "5",
-            "10",
-            "15"
-        ],
-        "profile" : [
-            "baseline",
-            "main",
-            "height"
-        ]
+    "video_device_capability": {
+        "ov5640": {
+            "yuv420": {
+                "640*480": [5, 10, 15],
+                "1920*1080": [5, 10, 15]
+            },
+            "rgb565": {
+                "640*480": [5, 10, 15],
+                "1920*1080": [5, 10, 15]
+            }
+        }
     },
-    "main" : {
+    "stream_config" : {
         "profile": "main",
+        "pix_fmt": "yuv420",
         "resolution": "1920*1080",
         "framerate": "15",
-        "bitrate": "2000"
+        "bitrate": "2000",
+        "v4l2-buf-cnt": "3"
     },
-    "minor" : {
-        "profile": "main",
-        "resolution": "640*480",
-        "framerate": "15",
-        "bitrate": "500"
-    }
 }

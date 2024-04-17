@@ -1,40 +1,58 @@
 #ifndef VIDEO_CONFIG_H_
 #define VIDEO_CONFIG_H_
 
+#include "common.h"
+
+#ifdef USE_OV5640
+#define SENSOR_NAME "ov5640"
+#else
+#define SENSOR_NAME "sc2336"
+#endif
+
 #define VIDOE_CONFIG_PATH "/config/video.json"
 
+#define MAX_PIX_FMT_NUM 5
 #define MAX_RESOLUTION_NUM 10
 #define MAX_FRAMERATE_NUM 10
 #define MAX_PROFILE_NUM 10
 #define MAX_PROFILE_STR_LEN 30
 
-#define MAIN_STRM_JSON_STR "main"
-#define MINOR_STRM_JSON_STR "minor"
-#define STRM_ID_MAIN 0
-#define STRM_ID_MINOR 1
-#define STRM_NUM 2
-
 typedef struct _RESOLUTION {
-    int width;
-    int height;
+    U32 width;
+    U32 height;
 } RESOLUTION;
 
-typedef struct _VI_CAP {
-    RESOLUTION resolution[MAX_RESOLUTION_NUM];
-    int framerate[MAX_FRAMERATE_NUM];
-    char profile[MAX_PROFILE_NUM][MAX_PROFILE_STR_LEN];
-} VI_CAP;
+typedef struct _RESOLUTION_CAP {
+    RESOLUTION res;
+    U32 framerates[MAX_FRAMERATE_NUM];
+} RESOLUTION_CAP;
+
+typedef struct _PIX_CAP {
+    U32 pix_fmt;
+    RESOLUTION_CAP res_cap[MAX_RESOLUTION_NUM];
+} PIX_CAP;
+
+typedef struct _VI_DEV_CAP {
+    PIX_CAP pix_cap[MAX_PIX_FMT_NUM];
+} VI_DEV_CAP;
 
 typedef struct _VI_STRM {
+    U32 pix_fmt;
+    U32 framerate;
+    U32 bitrate;
+    U32 v4l2_buf_cnt;
+    RESOLUTION res;
     char profile[MAX_PROFILE_STR_LEN];
-    RESOLUTION resolution;
-    int framerate;
-    int bitrate;
+    void **v4l2_buf_ptr;
 } VI_STRM;
 
 typedef struct _VI_PARAM {
-    VI_CAP vi_cap;
-    VI_STRM streams[STRM_NUM];
+    VI_DEV_CAP vi_dev_cap;
+    VI_STRM strm;
 } VI_PARAM;
+
+const char* pix_fmt_u32_to_json_str(U32 pix_fmt);
+U32 pix_fmt_json_str_to_u32(const char *json_str);
+int check_config(VI_PARAM *vi_param);
 
 #endif

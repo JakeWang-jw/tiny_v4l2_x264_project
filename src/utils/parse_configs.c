@@ -1,130 +1,122 @@
-#include "common.h"
 #include <json-c/json.h>
+#include <linux/videodev2.h>
+
+#include "common.h"
 #include "parse_config.h"
 #include "video_config.h"
-#include "dump_configs.h"
+#include "dump_info.h"
 
-static int parse_video_capability(json_object *top, VI_CAP *vi_cap) {
-    json_object *cur = NULL;
-    json_object *video_capability = NULL;
-    int num = 0;
+static int parse_video_capability(json_object *top, VI_DEV_CAP *vi_dev_cap) {
+    json_object *vi_dev_js = NULL;
+    json_object *sensor_js = NULL;
 
-    video_capability = json_object_object_get(top, "video_capability");
-    if (!video_capability) {
-        PRINT_ERROR("Can't parse video_capability config!");
+    vi_dev_js = json_object_object_get(top, "video_device_capability");
+    if (!vi_dev_js) {
+        PRINT_ERROR("Can't parse video_device_capability config!");
         goto error;
     }
 
-    cur = json_object_object_get(video_capability, "resolution");
-    if (!cur) {
-        PRINT_ERROR("Can't parse resolution config!");
+    sensor_js = json_object_object_get(vi_dev_js, SENSOR_NAME);
+    if (!sensor_js) {
+        PRINT_ERROR("Can't parse sensor config!");
         goto error;
     }
-    num = json_object_array_length(cur);
-    for (int i = 0; i < num; ++i) {
-        json_object *tmp = json_object_array_get_idx(cur, i);
-        const char *s = json_object_get_string(tmp);
-        vi_cap->resolution[i].width = atoi(s);
-        vi_cap->resolution[i].height = atoi(strchr(s, '*') + 1);
+
+    U32 pix_fmt_idx = 0;
+    json_object_object_foreach(sensor_js, pix_fmt_key, pix_fmt_val) {
+        U32 cur_fmt = pix_fmt_json_str_to_u32(pix_fmt_key);
+
+        if (0 == cur_fmt) {
+            PRINT_ERROR("Pixel Format is unsupported!");
+            goto error;
+        }
+        vi_dev_cap->pix_cap[pix_fmt_idx].pix_fmt = cur_fmt;
+
+        U32 res_idx = 0;
+        json_object_object_foreach(pix_fmt_val, res_key, res_val) {
+            U32 cur_width = atoi(res_key);
+            U32 cur_height = atoi(strchr(res_key, '*') + 1);
+
+            vi_dev_cap->pix_cap[pix_fmt_idx].res_cap[res_idx].res.width = cur_width;
+            vi_dev_cap->pix_cap[pix_fmt_idx].res_cap[res_idx].res.height = cur_height;
+
+            U32 num = json_object_array_length(res_val);
+            for (int i = 0; i < num; ++i) {
+                json_object *tmp = json_object_array_get_idx(res_val, i);
+                U32 cur_framerate = json_object_get_int(tmp);
+                vi_dev_cap->pix_cap[pix_fmt_idx].res_cap[res_idx].framerates[i] = cur_framerate;
+            }
+            res_idx++;
+        }
+        pix_fmt_idx++;
     }
 
-    cur = json_object_object_get(video_capability, "framerate");
-    if (!cur) {
-        PRINT_ERROR("Can't parse framerate config!");
-        goto error;
-    }
-    num = json_object_array_length(cur);
-    for (int i = 0; i < num; ++i) {
-        json_object *tmp = json_object_array_get_idx(cur, i);
-        vi_cap->framerate[i] = json_object_get_int(tmp);
-    }
-
-    cur = json_object_object_get(video_capability, "profile");
-    if (!cur) {
-        PRINT_ERROR("Can't parse profile config!");
-        goto error;
-    }
-    num = json_object_array_length(cur);
-    for (int i = 0; i < num; ++i) {
-        json_object *tmp = json_object_array_get_idx(cur, i);
-        const char *s = json_object_get_string(tmp);
-        strncpy(vi_cap->profile[i], s, MIN(strlen(s), MAX_PROFILE_STR_LEN));
-    }
-
-    dump_video_capability_stats(vi_cap);
+    dump_video_device_capability_stats(vi_dev_cap);
 
     return OK;
 error:
     return ERROR;
 }
 
-static int parse_stream_capability(json_object *strm_obj, VI_STRM *cur_strm) {
+static int parse_stream_capability(json_object *top, VI_STRM *vi_strm) {
     const char *s = NULL;
+    json_object *strm_json = NULL;
     json_object *cur = NULL;
 
-    cur = json_object_object_get(strm_obj, "profile");
+    strm_json = json_object_object_get(top, "stream_config");
+    if (!strm_json) {
+        PRINT_ERROR("Can't prase main stream config!");
+        goto error;
+    }
+
+    cur = json_object_object_get(strm_json, "profile");
     if (!cur) {
         PRINT_ERROR("Can't parse stream profile config!");
         goto error;
     }
     s = json_object_get_string(cur);
-    strncpy(cur_strm->profile, s, MIN(strlen(s), MAX_PROFILE_STR_LEN));
+    strncpy(vi_strm->profile, s, MIN(strlen(s), MAX_PROFILE_STR_LEN));
 
-    cur = json_object_object_get(strm_obj, "resolution");
+    cur = json_object_object_get(strm_json, "pix_fmt");
+    if (!cur) {
+        PRINT_ERROR("Can't parse stream profile config!");
+        goto error;
+    }
+    s = json_object_get_string(cur);
+    PRINT_DEBUG("stream pix_fmt: %s", s);
+    vi_strm->pix_fmt = pix_fmt_json_str_to_u32(s);
+
+    cur = json_object_object_get(strm_json, "resolution");
     if (!cur) {
         PRINT_ERROR("Can't parse stream resolution config!");
         goto error;
     }
     s = json_object_get_string(cur);
-    cur_strm->resolution.width = atoi(s);
-    cur_strm->resolution.height = atoi(strchr(s, '*') + 1);
+    vi_strm->res.width = atoi(s);
+    vi_strm->res.height = atoi(strchr(s, '*') + 1);
 
-    cur = json_object_object_get(strm_obj, "framerate");
+    cur = json_object_object_get(strm_json, "framerate");
     if (!cur) {
         PRINT_ERROR("Can't parse framerate config!");
         goto error;
     }
-    cur_strm->framerate = json_object_get_int(cur);
+    vi_strm->framerate = json_object_get_int(cur);
 
-    cur = json_object_object_get(strm_obj, "bitrate");
+    cur = json_object_object_get(strm_json, "bitrate");
     if (!cur) {
         PRINT_ERROR("Can't parse bitrate config!");
         goto error;
     }
-    cur_strm->bitrate = json_object_get_int(cur);
+    vi_strm->bitrate = json_object_get_int(cur);
 
-    dump_stream_capability_stats(cur_strm);
-
-    return OK;
-error:
-    return ERROR;
-}
-
-static int parse_streams_capability(json_object *top, VI_STRM *vi_strms) {
-    int ret = 0;
-    json_object *strm_cap = NULL;
-
-    strm_cap = json_object_object_get(top, MAIN_STRM_JSON_STR);
-    if (!strm_cap) {
-        PRINT_ERROR("Can't prase main stream config!");
+    cur = json_object_object_get(strm_json, "v4l2-buf-cnt");
+    if (!cur) {
+        PRINT_ERROR("Can't parse v4l2-buf-cnt config!");
         goto error;
     }
-    ret = parse_stream_capability(strm_cap, &vi_strms[STRM_ID_MAIN]);
-    if (OK != ret) {
-        PRINT_ERROR("Can't parse main stream config!");
-        goto error;
-    }
+    vi_strm->v4l2_buf_cnt = json_object_get_int(cur);
 
-    strm_cap = json_object_object_get(top, MINOR_STRM_JSON_STR);
-    if (!strm_cap) {
-        PRINT_ERROR("Can't prase minor stream config!");
-        goto error;
-    }
-    ret = parse_stream_capability(strm_cap, &vi_strms[STRM_ID_MINOR]);
-    if (OK != ret) {
-        PRINT_ERROR("Can't parse minor stream config!");
-        goto error;
-    }
+    dump_stream_capability_stats(vi_strm);
 
     return OK;
 error:
@@ -142,13 +134,13 @@ static int parse_video_config(VI_PARAM *vi_param) {
         goto error;
     }
 
-    ret = parse_video_capability(top, &vi_param->vi_cap);
+    ret = parse_video_capability(top, &vi_param->vi_dev_cap);
     if (OK != ret) {
         PRINT_ERROR("parse_video_capability failed!");
         goto error;
     }
 
-    ret = parse_streams_capability(top, vi_param->streams);
+    ret = parse_stream_capability(top, &vi_param->strm);
     if (OK != ret) {
         PRINT_ERROR("parse_streams_capability failed!");
         goto error;

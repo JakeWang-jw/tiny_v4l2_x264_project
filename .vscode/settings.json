@@ -1,6 +1,10 @@
 {
     "files.associations": {
         "json.h": "c",
-        "video_config.h": "c"
-    }
+        "video_config.h": "c",
+        "videodev2.h": "c",
+        "common.h": "c",
+        "json_util.h": "c",
+        "dump_info.h": "c"
+    },
 }
