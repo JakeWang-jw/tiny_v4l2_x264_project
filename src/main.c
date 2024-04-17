@@ -1,5 +1,6 @@
 #include "common.h"
 #include "capture.h"
+#include "encode.h"
 #include "parse_config.h"
 
 static void param_init(VI_PARAM *vi_param) {
@@ -33,12 +34,19 @@ int main(void) {
         goto error_free;
     }
 
-    ret = enum_video_device_capability();
-    if (OK != ret) {
-        PRINT_ERROR("enum_video_device_capability failed!");
+    // ret = enum_video_device_capability();
+    // if (OK != ret) {
+    //     PRINT_ERROR("enum_video_device_capability failed!");
+    //     goto error_free;
+    // }
+
+    ret = x264_encode_init(&vi_param->strm);
+    if (ret < 0) {
+        PRINT_ERROR("x264_encode_init failed!");
         goto error_free;
     }
 
+    x264_encode_deinit();
     free(vi_param);
     return OK;
 error_free:

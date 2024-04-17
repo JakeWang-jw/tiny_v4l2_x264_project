@@ -33,7 +33,10 @@ CFLAGS += -std=c11
 ### 链接选项
 ###
 LDFLAGS += -L$(CUR_DIR)/lib
+LDFLAGS += -lm
+LDFLAGS += -lpthread
 LDFLAGS += -ljson-c
+LDFLAGS += -lx264
 
 export CFLAGS
 export LDFLAGS
@@ -43,21 +46,26 @@ COMPILE_TARGET := tiny_video_program
 
 # 子文件夹路径
 V4L2_CAPTURE_PATH := $(CUR_DIR)/v4l2-capture
+X264_ENCODE_PATH := $(CUR_DIR)/x264-encode
 UTILS_PATH := $(CUR_DIR)/utils
 
 # 源文件及目标文件
 SRCS := $(wildcard $(CUR_DIR)/*.c)
 SRCS += $(wildcard $(V4L2_CAPTURE_PATH)/*.c)
+SRCS += $(wildcard $(X264_ENCODE_PATH)/*.c)
 SRCS += $(wildcard $(UTILS_PATH)/*.c)
 
 OBJS := $(SRCS:.c=.o)
 
-.phony: install all V4L2_CAPTURE UTILS
-all: UTILS V4L2_CAPTURE $(OBJS)
+.phony: install all V4L2_CAPTURE X264_ENCODE UTILS
+all: UTILS V4L2_CAPTURE X264_ENCODE $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $(COMPILE_TARGET)
 
 V4L2_CAPTURE:
 	$(MAKE) -C $(V4L2_CAPTURE_PATH) all
+
+X264_ENCODE:
+	$(MAKE) -C $(X264_ENCODE_PATH) all
 
 UTILS:
 	$(MAKE) -C $(UTILS_PATH) all
@@ -69,6 +77,7 @@ install:
 .phony: clean
 clean:
 	$(MAKE) -C $(V4L2_CAPTURE_PATH) clean
+	$(MAKE) -C $(X264_ENCODE_PATH) clean
 	$(MAKE) -C $(UTILS_PATH) clean
 	$(RM) *.o
 	$(RM) $(COMPILE_TARGET)
