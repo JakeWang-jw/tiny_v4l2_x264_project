@@ -33,8 +33,7 @@ CFLAGS += -std=c11
 ### 链接选项
 ###
 LDFLAGS += -L$(CUR_DIR)/lib
-LDFLAGS += -lm
-LDFLAGS += -lpthread
+LDFLAGS += -lm -lpthread
 LDFLAGS += -ljson-c
 LDFLAGS += -lx264
 

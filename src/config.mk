@@ -35,3 +35,7 @@ export CC := $(CROSS_COMPILE)-gcc
 export AR := $(CROSS_COMPILE)-ar
 
 export INSTALL := install -m 755
+
+ifneq ($(CONFIG_H264_FRAME_NUM),)
+export CFLAGS += -DH264_FRAME_NUM=$(CONFIG_H264_FRAME_NUM)
+endif

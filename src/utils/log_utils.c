@@ -12,7 +12,7 @@ void init_log_level(void) {
 #endif
 }
 
-void Log(int level, const char *filename, const char *func, int line, const char *format, ...) {
+void Log(int level, const char *func, int line, const char *format, ...) {
     if (level < current_log_level) {
         return;
     }
@@ -21,16 +21,16 @@ void Log(int level, const char *filename, const char *func, int line, const char
     va_start(args, format);
     switch (level) {
         case LOG_DEBUG:
-            fprintf(stderr, "[%s:%s:%d]: ", filename, func, line);
+            fprintf(stderr, "[%s:%d]: ", func, line);
             break;
         case LOG_INFO:
-            fprintf(stderr, "[%s:%s:%d]: ", filename, func, line);
+            fprintf(stderr, "[%s:%d]: ", func, line);
             break;
         case LOG_ERROR:
-            fprintf(stderr, "[%s:%s:%d]: ", filename, func, line);
+            fprintf(stderr, "[%s:%d]: ", func, line);
             break;
         default:
-            fprintf(stderr, "UNKNOWN [%s:%s:%d]: ", filename, func, line);
+            fprintf(stderr, "UNKNOWN [%s:%d]: ", func, line);
             break;
     }
     vfprintf(stderr, format, args);

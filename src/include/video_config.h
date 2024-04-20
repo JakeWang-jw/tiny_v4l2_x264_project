@@ -9,7 +9,7 @@
 #define SENSOR_NAME "sc2336"
 #endif
 
-#define VIDOE_CONFIG_PATH "/config/video.json"
+#define VIDOE_CONFIG_PATH "/home/root/config/video.json"
 
 #define MAX_PIX_FMT_NUM 5
 #define MAX_RESOLUTION_NUM 10
@@ -41,9 +41,11 @@ typedef struct _VI_STRM {
     U32 framerate;
     U32 bitrate;
     U32 v4l2_buf_cnt;
+    int v4l2_buf_len;
+    int v4l2_fd;
+    void **v4l2_buf_ptr;
     RESOLUTION res;
     char profile[MAX_PROFILE_STR_LEN];
-    void **v4l2_buf_ptr;
 } VI_STRM;
 
 typedef struct _VI_PARAM {

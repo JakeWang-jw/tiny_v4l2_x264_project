@@ -16,10 +16,12 @@ int enum_video_device_capability(void) {
     struct v4l2_frmivalenum frmival;
 
     // 1. 打开设备
-    fd = open("/dev/video0", O_RDWR);
-    if (0 > fd) {
-        PRINT_ERROR("Open %s error: %s", "dev/video0", strerror(errno));
-        goto error;
+    if (-1 == fd) {
+        fd = open("/dev/video1", O_RDWR);
+        if (0 > fd) {
+            PRINT_ERROR("Open %s error: %s", "dev/video0", strerror(errno));
+            goto error;
+        }
     }
 
     // 2. 查询设备的属性/能力/功能
@@ -50,14 +52,14 @@ int enum_video_device_capability(void) {
         frmsize.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         frmsize.pixel_format = fmtdesc.pixelformat;
         while (0 == ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsize)) {
-            PRINT_INFO("frame_size<%d*%d>", frmsize.discrete.width, frmsize.discrete.height);
+            PRINT_INFO("  frame_size<%d*%d>", frmsize.discrete.width, frmsize.discrete.height);
             frmival.index = 0;
             frmival.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
             frmival.pixel_format = frmsize.pixel_format;
             frmival.width = frmsize.discrete.width;
             frmival.height = frmsize.discrete.height;
             while (0 == ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &frmival)) {
-                PRINT_INFO("Frame interval<%ffps>",
+                PRINT_INFO("    Frame interval<%dfps>",
                     frmival.discrete.denominator / frmival.discrete.numerator);
                 frmival.index++;
             }
@@ -75,6 +77,7 @@ error:
 }
 
 static int set_format(VI_STRM *vi_strm, int fd) {
+    int ret = 0;
     struct v4l2_format fmt;
 
     memset(&fmt, 0x0, sizeof(fmt));
@@ -82,13 +85,18 @@ static int set_format(VI_STRM *vi_strm, int fd) {
     fmt.fmt.pix.width = vi_strm->res.width;
     fmt.fmt.pix.height = vi_strm->res.height;
     fmt.fmt.pix.pixelformat = vi_strm->pix_fmt;
-    if (0 > ioctl(fd, VIDIOC_S_FMT, &fmt)) {
+    PRINT_DEBUG("width: %d, height: %d", fmt.fmt.pix.width, fmt.fmt.pix.height);
+    PRINT_DEBUG("pix_fmt: 0x%x", vi_strm->pix_fmt);
+    ret = ioctl(fd, VIDIOC_S_FMT, &fmt);
+    if (0 > ret) {
         PRINT_ERROR("ioctl VIDIOC_S_FMT error!");
+        PRINT_ERROR("errno: %s", strerror(errno));
         goto error;
     }
 
     // 再检查一遍，确认参数生效了
     if (vi_strm->res.width != fmt.fmt.pix.width || vi_strm->res.height != fmt.fmt.pix.height) {
+        PRINT_ERROR("fmt.ftm.pix.width: %d, fmt.fmt.pix.height: %d", fmt.fmt.pix.width, fmt.fmt.pix.height);
         PRINT_ERROR("Set resolution failed!");
         goto error;
     }
@@ -147,6 +155,10 @@ static int set_buffer(VI_STRM *vi_strm, int fd) {
         PRINT_ERROR("ioctl VIDIOC_REQBUFS failed!");
         goto error;
     }
+    if (reqbuf.count != vi_strm->v4l2_buf_cnt) {
+        PRINT_ERROR("Can't get enough v4l2 buffer!");
+        goto error;
+    }
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
@@ -155,6 +167,7 @@ static int set_buffer(VI_STRM *vi_strm, int fd) {
             PRINT_ERROR("ioctl VIDIOC_QUERYBUF failed!");
             goto error;
         }
+        PRINT_DEBUG("buf.index: %d, buf.length: %d", buf.index, buf.length);
         vi_strm->v4l2_buf_ptr[buf.index] = mmap(NULL, buf.length,
             PROT_READ | PROT_WRITE, MAP_SHARED, fd,
             buf.m.offset);
@@ -180,32 +193,31 @@ error:
 }
 
 int capture_init(VI_STRM *vi_strm) {
-    int fd = -1;
     int ret = 0;
 
     // 1. 打开设备
-    fd = open("/dev/video0", O_RDWR);
-    if (0 > fd) {
+    vi_strm->v4l2_fd = open("/dev/video1", O_RDWR);
+    if (0 > vi_strm->v4l2_fd) {
         PRINT_ERROR("Open %s error: %s", "dev/video0", strerror(errno));
         goto error;
     }
 
     // 2. 设置分辨率，像素格式
-    ret = set_format(vi_strm, fd);
+    ret = set_format(vi_strm, vi_strm->v4l2_fd);
     if (OK != ret) {
         PRINT_ERROR("set_format failed!");
         goto error_free;
     }
 
     // 3. 设置帧率
-    ret = set_framerate(vi_strm, fd);
+    ret = set_framerate(vi_strm, vi_strm->v4l2_fd);
     if (OK != ret) {
         PRINT_ERROR("set_framerate failed!");
         goto error_free;
     }
 
     // 4. 设置缓存
-    ret = set_buffer(vi_strm, fd);
+    ret = set_buffer(vi_strm, vi_strm->v4l2_fd);
     if (OK != ret) {
         PRINT_ERROR("set_buffer failed!");
         goto error_free;
@@ -213,18 +225,35 @@ int capture_init(VI_STRM *vi_strm) {
 
     // 开启视频采集
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (0 > ioctl(fd, VIDIOC_STREAMON, &type)) {
+    ret = ioctl(vi_strm->v4l2_fd, VIDIOC_STREAMON, &type);
+    if (0 > ret) {
         PRINT_ERROR("ioctl VIDIOC_STREAMON failed!");
         goto error_free;
     }
 
+    PRINT_DEBUG("capture_init success!");
     return OK;
 error_free:
-    close(fd);
+    close(vi_strm->v4l2_fd);
+    vi_strm->v4l2_fd = -1;
 error:
     return ERROR;
 }
 
+void capture_deinit(VI_STRM *vi_strm) {
+    int i = 0;
+    int ret = 0;
+    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
+    ret = ioctl(vi_strm->v4l2_fd, VIDIOC_STREAMOFF, &type);
+    if (0 > ret) {
+        PRINT_ERROR("ioctl VIDIOC_STREAMOFF failed!");
+    }
 
+    for (i = 0; i < vi_strm->v4l2_buf_cnt; ++i) {
+        munmap(vi_strm->v4l2_buf_ptr[i], vi_strm->v4l2_buf_len);
+    }
 
+    close(vi_strm->v4l2_fd);
+    free(vi_strm->v4l2_buf_ptr);
+}

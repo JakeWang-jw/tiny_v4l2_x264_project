@@ -8,7 +8,7 @@ static const struct {
     U32 value;
 } json_str_to_u32_map[] = {
     {"rgb565", V4L2_PIX_FMT_RGB565},
-    {"yuv420", V4L2_PIX_FMT_YUV420},
+    {"yuyv422", V4L2_PIX_FMT_YUYV},
     {NULL, 0}
 };
 
