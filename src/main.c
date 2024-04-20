@@ -14,7 +14,7 @@
 #endif
 
 static void param_init(VI_PARAM *vi_param) {
-    // init vi_param
+    // 目前没有额外的操作，memset为0x0即可
     memset(vi_param, 0x0, sizeof(*vi_param));
 }
 
@@ -107,17 +107,13 @@ int main(void) {
         goto error_free1;
     }
 
-    /*
-     * 刚使用sensor时，可调用该函数来探测sensor的capability
-     * 调用该函数打印的log较长，平时不开启
-     */
     ret = enum_video_device_capability();
     if (OK != ret) {
         PRINT_ERROR("enum_video_device_capability failed!");
         goto error_free1;
     }
 
-    ret = capture_init(&vi_param->strm);
+    ret = v4l2_capture_init(&vi_param->strm);
     if (OK != ret) {
         PRINT_ERROR("capture init failed!");
         goto error_free1;
@@ -136,13 +132,13 @@ int main(void) {
 	pthread_join(thread, NULL);
 
     x264_encode_deinit();
-    capture_deinit(&vi_param->strm);
+    v4l2_capture_deinit(&vi_param->strm);
     free(vi_param);
     return OK;
 error_free3:
     x264_encode_deinit();
 error_free2:
-    capture_deinit(&vi_param->strm);
+    v4l2_capture_deinit(&vi_param->strm);
 error_free1:
     free(vi_param);
 error:

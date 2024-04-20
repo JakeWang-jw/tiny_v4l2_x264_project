@@ -59,7 +59,7 @@ int x264_encode_init(VI_STRM *vi_strm) {
     int ret = 0;
 
     ret = x264_param_default_preset(&param, "ultrafast", NULL);
-    if(ret < 0) {
+    if(0 > ret) {
         PRINT_ERROR("x264_param_default_preset failed!");
         goto error;
     }
@@ -90,7 +90,7 @@ int x264_encode_init(VI_STRM *vi_strm) {
      * 设置profile
      */
     ret = x264_param_apply_profile(&param, vi_strm->profile);
-    if(ret < 0) {
+    if(0 > ret) {
         PRINT_ERROR("x264_param_apply_profile failed!");
         goto error;
     }
@@ -99,7 +99,7 @@ int x264_encode_init(VI_STRM *vi_strm) {
      * 分配原图像buffer
      */
     ret = x264_picture_alloc(&pic, param.i_csp, param.i_width, param.i_height);
-    if(ret < 0) {
+    if(0 > ret) {
         PRINT_ERROR("x264_picture_alloc failed!");
         goto error;
     }
@@ -134,7 +134,7 @@ void x264_encode_deinit(void) {
     x264_picture_t pic_out;
 
     /* Flush delayed frames */
-    while( x264_encoder_delayed_frames( h ) )
+    while(x264_encoder_delayed_frames(h))
     {
         i_frame_size = x264_encoder_encode(h, &nal, &i_nal, NULL, &pic_out);
         if(i_frame_size > 0)
@@ -172,7 +172,5 @@ int x264_encode_one_frame(unsigned char* yuyv422_buf) {
 
     return OK;
 error:
-    x264_encoder_close(h);
-    x264_picture_clean(&pic);
     return ERROR;
 }

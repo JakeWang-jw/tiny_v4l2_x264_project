@@ -3,13 +3,16 @@
 #include "parse_config.h"
 
 void dump_video_device_capability_stats(VI_DEV_CAP *vi_dev_cap) {
+    int i = 0;
+    int j = 0;
+    int k = 0;
     PRINT_DEBUG("VI_DEV_CAP:");
-    for (int i = 0; i < MAX_PIX_FMT_NUM; ++i) {
+    for (i = 0; i < MAX_PIX_FMT_NUM; ++i) {
         if (0 == vi_dev_cap->pix_cap[i].pix_fmt) {
             continue;
         }
         PRINT_DEBUG("  pix_fmt: %s", pix_fmt_u32_to_json_str(vi_dev_cap->pix_cap[i].pix_fmt));
-        for (int j = 0; j < MAX_RESOLUTION_NUM; ++j) {
+        for (j = 0; j < MAX_RESOLUTION_NUM; ++j) {
             if (0 == vi_dev_cap->pix_cap[i].res_cap[j].res.width
                 || 0 == vi_dev_cap->pix_cap[i].res_cap[j].res.height) {
                 continue;
@@ -17,7 +20,7 @@ void dump_video_device_capability_stats(VI_DEV_CAP *vi_dev_cap) {
             PRINT_DEBUG("    resolution: %u, %u", vi_dev_cap->pix_cap[i].res_cap[j].res.width,
                 vi_dev_cap->pix_cap[i].res_cap[j].res.height);
             PRINT_DEBUG("      framerate: ");
-            for (int k = 0; k < MAX_FRAMERATE_NUM; ++k) {
+            for (k = 0; k < MAX_FRAMERATE_NUM; ++k) {
                 if (0 == vi_dev_cap->pix_cap[i].res_cap[j].framerates[k]) {
                     continue;
                 }

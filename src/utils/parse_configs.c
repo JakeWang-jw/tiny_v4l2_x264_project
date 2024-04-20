@@ -2,11 +2,20 @@
 #include <linux/videodev2.h>
 
 #include "common.h"
+#include "dump_info.h"
 #include "parse_config.h"
 #include "video_config.h"
-#include "dump_info.h"
 
 static int parse_video_capability(json_object *top, VI_DEV_CAP *vi_dev_cap) {
+    int i = 0;
+    U32 num = 0;
+    U32 cur_fmt = 0;
+    U32 res_idx = 0;
+    U32 cur_width = 0;
+    U32 cur_height = 0;
+    U32 pix_fmt_idx = 0;
+    U32 cur_framerate = 0;
+    json_object *tmp = NULL;
     json_object *vi_dev_js = NULL;
     json_object *sensor_js = NULL;
 
@@ -22,9 +31,9 @@ static int parse_video_capability(json_object *top, VI_DEV_CAP *vi_dev_cap) {
         goto error;
     }
 
-    U32 pix_fmt_idx = 0;
+    pix_fmt_idx = 0;
     json_object_object_foreach(sensor_js, pix_fmt_key, pix_fmt_val) {
-        U32 cur_fmt = pix_fmt_json_str_to_u32(pix_fmt_key);
+        cur_fmt = pix_fmt_json_str_to_u32(pix_fmt_key);
 
         if (0 == cur_fmt) {
             PRINT_ERROR("Pixel Format is unsupported!");
@@ -32,18 +41,18 @@ static int parse_video_capability(json_object *top, VI_DEV_CAP *vi_dev_cap) {
         }
         vi_dev_cap->pix_cap[pix_fmt_idx].pix_fmt = cur_fmt;
 
-        U32 res_idx = 0;
+        res_idx = 0;
         json_object_object_foreach(pix_fmt_val, res_key, res_val) {
-            U32 cur_width = atoi(res_key);
-            U32 cur_height = atoi(strchr(res_key, '*') + 1);
+            cur_width = atoi(res_key);
+            cur_height = atoi(strchr(res_key, '*') + 1);
 
             vi_dev_cap->pix_cap[pix_fmt_idx].res_cap[res_idx].res.width = cur_width;
             vi_dev_cap->pix_cap[pix_fmt_idx].res_cap[res_idx].res.height = cur_height;
 
-            U32 num = json_object_array_length(res_val);
-            for (int i = 0; i < num; ++i) {
-                json_object *tmp = json_object_array_get_idx(res_val, i);
-                U32 cur_framerate = json_object_get_int(tmp);
+            num = json_object_array_length(res_val);
+            for (i = 0; i < num; ++i) {
+                tmp = json_object_array_get_idx(res_val, i);
+                cur_framerate = json_object_get_int(tmp);
                 vi_dev_cap->pix_cap[pix_fmt_idx].res_cap[res_idx].framerates[i] = cur_framerate;
             }
             res_idx++;
@@ -126,7 +135,7 @@ error:
 static int parse_video_config(VI_PARAM *vi_param) {
     int ret = 0;
     json_object *top = NULL;
-    char *video_config_path = VIDOE_CONFIG_PATH;
+    char *video_config_path = VIDEO_CONFIG_PATH;
 
     top = json_object_from_file(video_config_path);
     if (!top) {
@@ -137,17 +146,19 @@ static int parse_video_config(VI_PARAM *vi_param) {
     ret = parse_video_capability(top, &vi_param->vi_dev_cap);
     if (OK != ret) {
         PRINT_ERROR("parse_video_capability failed!");
-        goto error;
+        goto error_free;
     }
 
     ret = parse_stream_capability(top, &vi_param->strm);
     if (OK != ret) {
         PRINT_ERROR("parse_streams_capability failed!");
-        goto error;
+        goto error_free;
     }
 
     json_object_put(top);
     return OK;
+error_free:
+    json_object_put(top);
 error:
     return ERROR;
 }
@@ -158,6 +169,10 @@ int parse_config(VI_PARAM *vi_param) {
         PRINT_ERROR("parse_video_config failed!");
         goto error;
     }
+
+    /*
+     * \todo 这里后续可以增加其它配置，视项目需求而定
+     */
 
     return OK;
 error:

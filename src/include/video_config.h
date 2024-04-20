@@ -5,11 +5,11 @@
 
 #ifdef USE_OV5640
 #define SENSOR_NAME "ov5640"
-#else
+#elif defined(USE_SC2336)
 #define SENSOR_NAME "sc2336"
 #endif
 
-#define VIDOE_CONFIG_PATH "/home/root/config/video.json"
+#define VIDEO_CONFIG_PATH "/home/root/config/video.json"
 
 #define MAX_PIX_FMT_NUM 5
 #define MAX_RESOLUTION_NUM 10
